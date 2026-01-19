@@ -15,41 +15,41 @@
         }
 
         #map {
-            position: relative;
-            width: 100%;
-            max-width: 1000px;
-            margin: auto;
             aspect-ratio: 16 / 9;
             background-color: #dee2e6;
-            background-size: contain;
-            background-repeat: no-repeat;
             background-position: center;
+            background-repeat: no-repeat;
+            background-size: contain;
             border-radius: 10px;
+            margin: auto;
+            max-width: 1000px;
             overflow: hidden;
+            position: relative;
+            width: 100%;
         }
 
         .seat {
-            position: absolute;
+            background: rgba(46, 204, 113, 0.45);
             border-radius: 50%;
             border: 2px solid #fff;
-            transform: translate(-50%, -50%);
             cursor: pointer;
-            background: rgba(46, 204, 113, 0.45);
+            position: absolute;
+            transform: translate(-50%, -50%);
             /* verde */
         }
 
         .seat.occupied {
             background: rgba(231, 76, 60, 0.55);
-            /* vermelho */
             cursor: not-allowed;
+            /* vermelho */
         }
 
         .preview {
-            position: absolute;
-            pointer-events: none;
+            background: rgba(46, 204, 113, 0.25);
             border-radius: 50%;
             border: 1px dashed #fff;
-            background: rgba(46, 204, 113, 0.25);
+            pointer-events: none;
+            position: absolute;
             transform: translate(-50%, -50%);
         }
 
@@ -100,7 +100,9 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
 
-                <div class="modal-body">Deseja realmente reservar este assento?</div>
+                <div class="modal-body">
+                    Deseja realmente reservar o assento <span id="modalSeatNumber"></span>?
+                </div>
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -222,8 +224,9 @@
                 }
 
                 if (mode === "reserve" && !seat.occupied) {
-                    seatToConfirm = seat;
-                    confirmModal.show();
+                    seatToConfirm = seat
+                    document.getElementById("modalSeatNumber").textContent = seat.item
+                    confirmModal.show()
                 }
 
                 save();
@@ -233,9 +236,16 @@
 
             if (mode !== "edit") return;
 
+            function nextItem() {
+                return seats.length
+                    ? Math.max(...seats.map(s => s.item)) + 1
+                    : 1
+            }
+
             const rect = map.getBoundingClientRect();
             seats.push({
                 id: Date.now(),
+                item: nextItem(),
                 x: ((e.clientX - rect.left) / rect.width) * 100,
                 y: ((e.clientY - rect.top) / rect.height) * 100,
                 size: seatSize,
@@ -261,12 +271,12 @@
 
         // ---------- Exportar ----------
         exportLayout.onclick = () => {
-            const layout = seats.map(({ id, x, y, size }) => ({ id, x, y, size }));
+            const layout = seats.map(({ id, item, x, y, size }) => ({ id, item, x, y, size }))
             download(layout, "roomLayout.json");
         };
 
         exportOccupied.onclick = () => {
-            const occupied = seats.filter((s) => s.occupied).map((s) => s.id);
+            const occupied = seats.filter(s => s.occupied).map(s => s.item)
             download(occupied, "occupiedSeats.json");
         };
 
@@ -309,12 +319,15 @@
 
                 if (seat.occupied) {
                     el.classList.add("occupied")
-                    el.setAttribute("data-bs-toggle", "tooltip")
-                    el.setAttribute("data-bs-title", "Reservado")
-                } else {
-                    el.setAttribute("data-bs-toggle", "tooltip")
-                    el.setAttribute("data-bs-title", "Disponível")
                 }
+
+                el.setAttribute("data-bs-toggle", "tooltip")
+                el.setAttribute(
+                    "data-bs-title",
+                    seat.occupied
+                        ? `Assento ${seat.item} (Reservado)`
+                        : `Assento ${seat.item} (Livre)`
+                )
 
                 el.style.left = seat.x + "%"
                 el.style.top = seat.y + "%"
